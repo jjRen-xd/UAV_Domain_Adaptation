@@ -1,3 +1,11 @@
+'''
+Author: 1411102509@qq.com 1411102509@qq.com
+Date: 2023-01-01 16:00:38
+LastEditors: 1411102509@qq.com 1411102509@qq.com
+LastEditTime: 2023-01-09 14:36:32
+FilePath: /UAV_Domain_Adaptation/configs/default_configs.py
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+'''
 # -*- coding: utf-8 -*- #
 '''
 --------------------------------------------------------------------------
@@ -28,23 +36,23 @@ class Configs(object):
    def __init__(self):
       
       ''' 数据集划分参数配置 '''
-      self.divide_dataset_name = "UAV2022.11.18_dtmb04_0.01"  # 此次数据集划分名称
+      self.divide_dataset_name = "UAV2022.11.14_dtmb03_0dB_0.5"  # 此次数据集划分名称
       self.divide_dataset_savePath = "./dataset"      # 此次数据集划分保存的路径
-      self.classes = ["DH","DQ","DS","DX","DY","DZ"]                     # 数据集类别
+      self.classes = ["N","Y"]                     # 数据集类别
       self.reshape_size = (224, 224)                   # 数据重塑尺寸
       self.train_divide = {
-         "data_path": "/data/UAV_DATA_2022.11.20/2022-11-18_tdms/DTMB_04/Train",      # 训练集数据路径
+         "data_path": "/data1/UAV_DATA_2022.11.16/2022-11-14_tdms/Sense_a/SNR_0dB/Train",      # 训练集数据路径
          "crop_len": self.reshape_size[0]*self.reshape_size[1],          # 训练集裁剪数据路径
          "conti_Len": 0,
-         "trainset_ratio": 0.01,
+         "trainset_ratio": 0.5,
          "testset_ratio": 0,
       }
       self.test_divide = {
-         "data_path": "/data/UAV_DATA_2022.11.20/2022-11-18_tdms/DTMB_04/Test",      # 训练集数据路径
+         "data_path": "/data1/UAV_DATA_2022.11.16/2022-11-14_tdms/Sense_a/SNR_0dB/Test",      # 训练集数据路径
          "crop_len": self.reshape_size[0]*self.reshape_size[1],          # 训练集裁剪数据路径
          "conti_Len": 0,
          "trainset_ratio": 0,
-         "testset_ratio": 0.01,
+         "testset_ratio": 0.5,
       }
 
 

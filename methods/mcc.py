@@ -15,9 +15,12 @@ from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+import torch.nn as nn
 from torchvision import transforms
 
-import UAV_Domain_Adaptation.methods.utils as utils
+import methods.utils as utils
+from dataset.UAV2022 import UAVDataset
+
 from tllib.self_training.mcc import MinimumClassConfusionLoss, ImageClassifier
 from tllib.utils.data import ForeverDataIterator
 from tllib.utils.metric import accuracy
@@ -44,20 +47,34 @@ def main(args: argparse.Namespace):
 
     cudnn.benchmark = True
 
-    # Data loading code     
-    train_transform = transforms.Compose([ 
-        # transforms.ToTensor()
-        # waiting add
-    ])
-    val_transform = transforms.Compose([ 
-        # transforms.ToTensor()
-        # waiting add
-    ])
-    print("train_transform: ", train_transform)
-    print("val_transform: ", val_transform)
+    # Data loading code
+    num_classes = 2     
+    channels = ["CH0",]
+    reshape_size = (224, 224)
 
-    train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes, args.class_names = \
-        utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
+    train_source_dataset = UAVDataset(
+        "/data1/jjren/UAV_Domain_Adaptation/dataset/UAV2022.11.14_dtmb03_0dB_0.5/train_set.txt",
+        channels,reshape_size,
+        return_label=True,
+    )
+    train_target_dataset = UAVDataset(
+        "/data1/jjren/UAV_Domain_Adaptation/dataset/UAV2022.11.22_dtmb03_0dB_0.5/train_set.txt",
+        channels,reshape_size,
+        return_label=False,
+    )
+    val_dataset = UAVDataset(
+        "/data1/jjren/UAV_Domain_Adaptation/dataset/UAV2022.11.22_dtmb03_0dB_0.5/test_set.txt",
+        channels,reshape_size,
+        return_label=True,
+    )
+    test_dataset = UAVDataset(
+        "/data1/jjren/UAV_Domain_Adaptation/dataset/UAV2022.11.22_dtmb03_0dB_0.5/test_set.txt",
+        channels,reshape_size,
+        return_label=True,
+    )
+
+    # train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes, args.class_names = \
+    #     utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)
     
     train_source_loader = DataLoader(train_source_dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
@@ -71,11 +88,13 @@ def main(args: argparse.Namespace):
 
     # create model
     print("=> using model '{}'".format(args.arch))
-    backbone = utils.get_model(args.arch, pretrain=not args.scratch)
+    backbone = utils.get_model(args.arch, pretrain=False)
     pool_layer = nn.Identity() if args.no_pool else None
     classifier = ImageClassifier(backbone, num_classes, bottleneck_dim=args.bottleneck_dim,
                                  pool_layer=pool_layer, finetune=not args.scratch).to(device)
 
+    classifier.backbone.conv1 = nn.Conv2d(len(channels)*2, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+    classifier.to(device)
     # define optimizer and lr scheduler
     optimizer = SGD(classifier.get_parameters(), args.lr, momentum=args.momentum, weight_decay=args.weight_decay,
                     nesterov=True)
@@ -146,7 +165,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
     cls_accs = AverageMeter('Cls Acc', ':3.1f')
 
     progress = ProgressMeter(
-        args.iters_per_epoch,
+        min(len(train_source_iter), len(train_target_iter)),
         [batch_time, data_time, losses, trans_losses, cls_accs],
         prefix="Epoch: [{}]".format(epoch))
 
@@ -154,7 +173,7 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
     model.train()
 
     end = time.time()
-    for i in range(args.iters_per_epoch):
+    for i in range(min(len(train_source_iter), len(train_target_iter))):
         x_s, labels_s = next(train_source_iter)[:2]
         x_t, = next(train_target_iter)[:1]
 
@@ -196,31 +215,8 @@ def train(train_source_iter: ForeverDataIterator, train_target_iter: ForeverData
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='MCC for Unsupervised Domain Adaptation')
-    # dataset parameters
-    parser.add_argument('root', metavar='DIR',
-                        help='root path of dataset')
-    parser.add_argument('-d', '--data', metavar='DATA', default='Office31', choices=utils.get_dataset_names(),
-                        help='dataset: ' + ' | '.join(utils.get_dataset_names()) +
-                             ' (default: Office31)')
-    parser.add_argument('-s', '--source', help='source domain(s)', nargs='+')
-    parser.add_argument('-t', '--target', help='target domain(s)', nargs='+')
-    
-    parser.add_argument('--train-resizing', type=str, default='default')
-    parser.add_argument('--val-resizing', type=str, default='default')
-    parser.add_argument('--resize-size', type=int, default=224,
-                        help='the image size after resizing')
-    parser.add_argument('--scale', type=float, nargs='+', default=[0.08, 1.0], metavar='PCT',
-                        help='Random resize scale (default: 0.08 1.0)')
-    parser.add_argument('--ratio', type=float, nargs='+', default=[3. / 4., 4. / 3.], metavar='RATIO',
-                        help='Random resize aspect ratio (default: 0.75 1.33)')
-    parser.add_argument('--no-hflip', action='store_true',
-                        help='no random horizontal flipping during training')
-    parser.add_argument('--norm-mean', type=float, nargs='+',
-                        default=(0.485, 0.456, 0.406), help='normalization mean')
-    parser.add_argument('--norm-std', type=float, nargs='+',
-                        default=(0.229, 0.224, 0.225), help='normalization std')
     # model parameters
-    parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
+    parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet50',
                         choices=utils.get_model_names(),
                         help='backbone architecture: ' +
                              ' | '.join(utils.get_model_names()) +
@@ -237,7 +233,7 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--batch-size', default=36, type=int,
                         metavar='N',
                         help='mini-batch size (default: 36)')
-    parser.add_argument('--lr', '--learning-rate', default=0.005, type=float,
+    parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                         metavar='LR', help='initial learning rate', dest='lr')
     parser.add_argument('--lr-gamma', default=0.001, type=float, help='parameter for lr scheduler')
     parser.add_argument('--lr-decay', default=0.75, type=float, help='parameter for lr scheduler')
@@ -245,12 +241,12 @@ if __name__ == '__main__':
     parser.add_argument('--wd', '--weight-decay', default=1e-3, type=float,
                         metavar='W', help='weight decay (default: 1e-3)',
                         dest='weight_decay')
-    parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
+    parser.add_argument('-j', '--workers', default=16, type=int, metavar='N',
                         help='number of data loading workers (default: 2)')
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
-    parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
-                        help='Number of iterations per epoch')
+    # parser.add_argument('-i', '--iters-per-epoch', default=1000, type=int,
+    #                     help='Number of iterations per epoch')
     parser.add_argument('-p', '--print-freq', default=100, type=int,
                         metavar='N', help='print frequency (default: 100)')
     parser.add_argument('--seed', default=None, type=int,

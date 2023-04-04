@@ -41,10 +41,13 @@ import argparse
 import importlib
 
 import numpy as np
+from numpy import sum,isrealobj,sqrt
+from numpy.random import standard_normal
 
 from torchvision import transforms
 from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
+
 
 class UAVDataset(Dataset):
     def __init__(
@@ -102,7 +105,7 @@ class UAVDataset(Dataset):
         if self.return_label:
             return sig, label
         else:
-            return sig
+            return sig, np.zeros(1)
   
     def __len__(self):
         return len(self.labels)
@@ -241,10 +244,6 @@ def divide_dataset(dataset_name, data_path, save_path, crop_len = 224*224,
 
 # author - Mathuranathan Viswanathan (gaussianwaves.com
 # This code is part of the book Digital Modulations using Python
-
-from numpy import sum,isrealobj,sqrt
-from numpy.random import standard_normal
-
 def awgn(s,SNRdB,L=1):
     """
     AWGN channel
@@ -278,7 +277,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         '--config', 
-        default="/data1/jjren/UAV_Detection_wav/configs/default_configs.py",
+        default="./configs/default_configs.py",
         type=str,
         help='Configuration file Path'
     )

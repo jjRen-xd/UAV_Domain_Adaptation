@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as T
 import torch.nn.functional as F
 
-import UAV_Domain_Adaptation.methods.utils as utils
+import methods.utils as utils
 from tllib.self_training.pi_model import L2ConsistencyLoss
 from tllib.self_training.mean_teacher import EMATeacher
 from tllib.self_training.self_ensemble import ClassBalanceLoss, ImageClassifier

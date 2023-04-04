@@ -20,7 +20,7 @@ from torch.optim import SGD
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 
-import UAV_Domain_Adaptation.methods.utils as utils
+import methods.utils as utils
 from tllib.alignment.adda import ImageClassifier
 from tllib.alignment.dann import DomainAdversarialLoss
 from tllib.modules.domain_discriminator import DomainDiscriminator
@@ -58,14 +58,14 @@ def main(args: argparse.Namespace):
     cudnn.benchmark = True
 
     # Data loading code
-    train_transform = utils.get_train_transform(args.train_resizing, scale=args.scale, ratio=args.ratio,
-                                                random_horizontal_flip=not args.no_hflip,
-                                                random_color_jitter=False, resize_size=args.resize_size,
-                                                norm_mean=args.norm_mean, norm_std=args.norm_std)
-    val_transform = utils.get_val_transform(args.val_resizing, resize_size=args.resize_size,
-                                            norm_mean=args.norm_mean, norm_std=args.norm_std)
-    print("train_transform: ", train_transform)
-    print("val_transform: ", val_transform)
+    train_transform = transforms.Compose([ 
+        # transforms.ToTensor()
+        # waiting add
+    ])
+    val_transform = transforms.Compose([ 
+        # transforms.ToTensor()
+        # waiting add
+    ])
 
     train_source_dataset, train_target_dataset, val_dataset, test_dataset, num_classes, args.class_names = \
         utils.get_dataset(args.data, args.root, args.source, args.target, train_transform, val_transform)

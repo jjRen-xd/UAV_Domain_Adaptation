@@ -17,7 +17,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-import UAV_Domain_Adaptation.methods.utils as utils
+import methods.utils as utils
 from tllib.modules.classifier import Classifier
 from tllib.self_training.pseudo_label import ConfidenceBasedSelfTrainingLoss
 from tllib.vision.transforms import MultipleApply
